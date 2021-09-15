@@ -50,13 +50,13 @@ class boat:
     def calculateSpeed(self):
         for c,location in enumerate(self.spotS):
             self.boatSpeed += location.spotSpeed
-            for locationII in self.spotS:
+            for d,locationII in enumerate(self.spotS):
                 i = location.spotSpeed
                 j = locationII.spotSpeed
-                rowerInteraction = self.cofactors[c][i,j]
+                rowerInteraction = self.cofactors[c,d][i,j]
                 self.boatSpeed += rowerInteraction
 #add some randomness to your life:
-        chance =  np.random.normal(0,0.2,(1,1))[0][0]  # numpy returns array or random numbers with normal distributions. accessing array to get a normal random number  
+        chance =  np.random.normal(0,10,(1,1))[0][0]  # numpy returns array or random numbers with normal distributions. accessing array to get a normal random number  
         self.boatSpeed += chance
     def makeGamets(self):
         gamete = []
@@ -65,20 +65,22 @@ class boat:
         return gamete
 
 class boatGen:
-    def __init__(self,maxSpeed=7,domFacts=2,boatSize=9,numBoats=1000):
+    def __init__(self,maxSpeed=7,domFacts=2,boatSize=9,numBoats=1000,panmixis = True):
+        self.panmixis = panmixis
         self.numBoats = numBoats
         self.maxSpeed = maxSpeed
         self.domFacts = domFacts
         self.boatSize = boatSize
         self.allBoats = [] # a list of all the class instances of boats generating ghere
         self.allGenRowers = {} #This variable gives us a summary of all rowers and their numbers
-        self.cofactors = []
-        for i in range(boatSize):#i represents the position on the boat (the locus)
+        self.cofactors = np.empty((self.boatSize,self.boatSize),dtype=np.ndarray)
+        for i in range(self.boatSize):#i represents the position on the boat (the locus)
             self.allGenRowers[i] = {}#First we generate the empty dictionaries for all possibilities
-            for j in range(maxSpeed + 1):#j is the allele, the name of the genes. In this case is also speed. 
+            for j in range(self.maxSpeed + 1):#j is the allele, the name of the genes. In this case is also speed. 
                 self.allGenRowers[i][j] = [0]
         for i in range(self.boatSize):
-            self.cofactors.append(np.random.normal(0,15,(boatSize+1,boatSize+1)))
+            for j in range (self.boatSize):
+                self.cofactors[i,j]=np.random.normal(0,15,(self.maxSpeed +1,self.maxSpeed+1))
         for i in range(numBoats):#here we generate the boats
             rowBoat = boat(self.cofactors,maxSpeed,domFacts,boatSize)
             self.allBoats.append(rowBoat)
@@ -113,12 +115,17 @@ class boatGen:
     def mate(self):
         #print('inside mate, minimum?')
         bachellors = self.allBoats.copy()
+        rd.shuffle(bachellors)#take away if we want panmixis
         #print('bachellor length is ' + str(len(bachellors)))
         marriedBoats = []
         while len(bachellors) > 1:#This loops divides boats into pair of boats
-            #print('Am I not getting into this loop?')    
-            husband = bachellors.pop(rd.randint(0,len(bachellors) -1))
-            wife = bachellors.pop(rd.randint(0,len(bachellors) - 1))
+            #print('Am I not getting into this loop?') 
+            if len(bachellors) < 7 or self.panmixis ==True:
+                husband = bachellors.pop(rd.randint(0,len(bachellors) -1))
+                wife = bachellors.pop(rd.randint(0,len(bachellors) - 1))
+            elif self.panmixis == False:#take away if we want panmixis
+                husband = bachellors.pop(rd.randint(0,5))
+                wife = bachellors.pop(rd.randint(0,5))
             marriedBoats.append([husband,wife])
             #print(husband)
         self.allBoats = []#Don't want to get stuck with an odd number of boats, so if there's a single bachellor without a mate, it's gone
@@ -161,7 +168,7 @@ print(a.allGenRowers)
 allGenerations = a.allGenRowers
 allSpeeds = [a.fitness]
 
-numberOfGenerations = 50
+numberOfGenerations = 100
 for i in range(numberOfGenerations):
 
     a.select()
