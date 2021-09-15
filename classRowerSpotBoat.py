@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 #class rower has speed and a dominance factor. 
 class rower:
-    def __init__(self,maxSpeed = 9, domFacts = 2):
+    def __init__(self,maxSpeed = 5, domFacts = 2):
         self.rowerSpeed = rd.randint(0,maxSpeed)
         self.dominance = rd.randint(0,domFacts)
 #Two rowers make up one "spot". The dominant one of the two will determine the speed added to the boat it is in. 
@@ -36,7 +36,7 @@ class spot:
         self.spotSpeed = self.dominantOne.rowerSpeed
 
 class boat:
-    def __init__(self,cofactors,maxSpeed = 9, domFacts=2, boatSize=9, rowers = None):
+    def __init__(self,cofactors,maxSpeed = 5, domFacts=2, boatSize=9, rowers = None):
         self.boatSpeed = 0
         self.cofactors = cofactors
         if rowers == None:
@@ -48,12 +48,12 @@ class boat:
             self.spotS = rowers
         self.calculateSpeed()
     def calculateSpeed(self):
-        for location in self.spotS:
+        for c,location in enumerate(self.spotS):
             self.boatSpeed += location.spotSpeed
             for locationII in self.spotS:
                 i = location.spotSpeed
                 j = locationII.spotSpeed
-                rowerInteraction = self.cofactors[i,j]
+                rowerInteraction = self.cofactors[c][i,j]
                 self.boatSpeed += rowerInteraction
 #add some randomness to your life:
         chance =  np.random.normal(0,0.2,(1,1))[0][0]  # numpy returns array or random numbers with normal distributions. accessing array to get a normal random number  
@@ -65,23 +65,26 @@ class boat:
         return gamete
 
 class boatGen:
-    def __init__(self,maxSpeed=9,domFacts=2,boatSize=9,numBoats=1000):
+    def __init__(self,maxSpeed=7,domFacts=2,boatSize=9,numBoats=1000):
         self.numBoats = numBoats
         self.maxSpeed = maxSpeed
         self.domFacts = domFacts
         self.boatSize = boatSize
         self.allBoats = [] # a list of all the class instances of boats generating ghere
         self.allGenRowers = {} #This variable gives us a summary of all rowers and their numbers
+        self.cofactors = []
         for i in range(boatSize):#i represents the position on the boat (the locus)
             self.allGenRowers[i] = {}#First we generate the empty dictionaries for all possibilities
             for j in range(maxSpeed + 1):#j is the allele, the name of the genes. In this case is also speed. 
                 self.allGenRowers[i][j] = [0]
-        self.cofactors = np.random.normal(0,0.2,(boatSize+1,boatSize+1))
+        for i in range(self.boatSize):
+            self.cofactors.append(np.random.normal(0,15,(boatSize+1,boatSize+1)))
         for i in range(numBoats):#here we generate the boats
             rowBoat = boat(self.cofactors,maxSpeed,domFacts,boatSize)
             self.allBoats.append(rowBoat)
         self.allBoats.sort(key=op.attrgetter('boatSpeed'))#returns boats ordered from slowest to fastest
         self.calculateRowers()
+        self.calculateFitness()
 
     def calculateRowers(self):
         self.allGenRowers = {} #This variable gives us a summary of all rowers and their numbers
@@ -99,17 +102,18 @@ class boatGen:
                 self.allGenRowers[locus.position][allele1][0] += 1#remember there are two rowers per "spot" or position in the boat
                 
     def select(self):#selects the best half of boats
-        print(f'all boats are before select:{len(self.allBoats)}')
+        #print(f'all boats are before select:{len(self.allBoats)}')
         midWay = int(self.numBoats/2)
-        print(f'midway is{midWay} , and numBoats is {self.numBoats}')
+        #print(f'midway is{midWay} , and numBoats is {self.numBoats}')
         del self.allBoats[0:midWay]
-        print(f'all boats are after select:{len(self.allBoats)}')
+        #print(f'all boats are after select:{len(self.allBoats)}')
         self.calculateRowers()
         self.numBoats = len(self.allBoats)
+        self.calculateFitness()
     def mate(self):
-        print('inside mate, minimum?')
+        #print('inside mate, minimum?')
         bachellors = self.allBoats.copy()
-        print('bachellor length is ' + str(len(bachellors)))
+        #print('bachellor length is ' + str(len(bachellors)))
         marriedBoats = []
         while len(bachellors) > 1:#This loops divides boats into pair of boats
             #print('Am I not getting into this loop?')    
@@ -133,16 +137,21 @@ class boatGen:
                     rowers.append(spot(position=place,rowers=[allele0,allele1]))
                     child = boat(self.cofactors, self.maxSpeed, self.domFacts, self.boatSize, rowers )
                 self.allBoats.append(child)
-                print(f'number of boats is {len(self.allBoats)}, i is {i}, c is {c}')
+                #print(f'number of boats is {len(self.allBoats)}, i is {i}, c is {c}')
 
         #print(self.allBoats)
         self.allBoats.sort(key=op.attrgetter('boatSpeed'))#returns boats ordered from slowest to fastest
         self.calculateRowers()
         self.numBoats = len(self.allBoats)
+        self.calculateFitness()
+    def calculateFitness(self):
+        self.fitness = 0
+        for boat in self.allBoats:
+            self.fitness += boat.boatSpeed
 
                 
      
-a = boatGen(numBoats=17)              
+a = boatGen(numBoats=5000)              
 for individual in a.allBoats:
     print('speed is ' + str(individual.boatSpeed))
 print(a.allGenRowers)
@@ -150,17 +159,34 @@ print(a.allGenRowers)
 #a.mate()
 # print(a.allGenRowers)
 allGenerations = a.allGenRowers
+allSpeeds = [a.fitness]
 
-numberOfGenerations = 30
+numberOfGenerations = 50
 for i in range(numberOfGenerations):
+
     a.select()
     a.mate()
+    allSpeeds.append(a.fitness)
     for j in range(a.boatSize):
-        for z in range(a.maxSpeed):
+        for z in range(a.maxSpeed + 1):
             allGenerations[j][z] = allGenerations[j][z] + a.allGenRowers[j][z]
+allPlots = {}
+figures = []
+#plt.figure()
+for locus in range(a.boatSize):
+    figures.append(plt.figure())
+    legend = []
+    allPlots[locus] = []
+    for allele in range(a.maxSpeed + 1):
+        allPlots[locus].append(plt.plot(allGenerations[locus][allele]))
+        legend.append(f'locus:{locus},allele:{allele}')
+    plt.legend(legend, loc = 'upper left')
+    plt.show()
+        
+        
+speedFigure = plt.figure()
+boatSpeedPlot = plt.plot(allSpeeds)
 
-
-plotallele0 = plt.plot(allGenerations[0][0])
     
 
 
