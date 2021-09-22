@@ -62,15 +62,12 @@ class boatGen:
         del self.allBoats[0:midWay]
         midSpeed = self.allBoats[0].boatSpeed
         for i,deme in enumerate(self.allDemes):
-            print(f'length of deme is {len(deme)}')
             j = 0
             demeLen = len(deme)
             for z in range(demeLen):
-                print(f'speed of boat is {deme[j].boatSpeed}, from deme {i}, z is {z}')
                 if deme[j].boatSpeed < midSpeed:
                     del self.allDemes[i][j]
                 else:
-                    print(f'boatspeed not eliminated is {deme[j].boatSpeed}, midSpeed is {midSpeed}')
                     j += 1
         self.calculateRowers()
         self.numBoats = len(self.allBoats)
@@ -101,9 +98,7 @@ class boatGen:
                 husband = deme.pop(rd.randint(0,len(deme) -1))
                 wife = deme.pop(rd.randint(0,len(deme)- 1))
                 marriedBoats[d].append([husband,wife])
-                print(f'length of deme is {len(deme)}')
         self.allDemes = []#Don't want to get stuck with an odd number of boats, so if there's a single bachellor without a mate, it's gone
-        print(f'length of married boats is {len(marriedBoats[0])}')
         for d,deme in enumerate(marriedBoats):
             self.allDemes.append([])
             #print(f'length of deme is{len(deme)} ')
